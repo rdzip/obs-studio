@@ -42,7 +42,7 @@
 #define SETTING_HOOK_RATE            "hook_rate"
 #define SETTING_RGBA10A2_SPACE       "rgb10a2_space"
 #define SETTINGS_COMPAT_INFO         "compat_info"
-#define SETTINGS_PROCESS_ID          "process_id"
+#define SETTINGS_HWND		     "hwnd"
 
 /* deprecated */
 #define SETTING_ANY_FULLSCREEN   "capture_any_fullscreen"
@@ -113,7 +113,7 @@ struct game_capture_config {
 	enum hook_rate hook_rate;
 	bool is_10a2_2100pq;
 	bool capture_audio;
-	DWORD process_id;
+	uint64_t hwnd;
 };
 
 typedef DPI_AWARENESS_CONTEXT(WINAPI *PFN_SetThreadDpiAwarenessContext)(DPI_AWARENESS_CONTEXT);
@@ -448,6 +448,8 @@ static inline void get_config(struct game_capture_config *cfg, obs_data_t *setti
 	cfg->hook_rate = (enum hook_rate)obs_data_get_int(settings, SETTING_HOOK_RATE);
 	cfg->is_10a2_2100pq = strcmp(obs_data_get_string(settings, SETTING_RGBA10A2_SPACE), "2100pq") == 0;
 	cfg->capture_audio = obs_data_get_bool(settings, SETTING_CAPTURE_AUDIO);
+
+	cfg->hwnd = obs_data_get_int(settings, SETTINGS_HWND);
 }
 
 static inline int s_cmp(const char *str1, const char *str2)
@@ -1163,15 +1165,7 @@ static void get_selected_window(struct game_capture *gc)
 
 static void try_hook(struct game_capture *gc)
 {
-	HWND window = NULL;
-	do {
-		window = FindWindowEx(NULL, window, NULL, NULL);
-		DWORD dwProcID = 0;
-		GetWindowThreadProcessId(window, &dwProcID);
-		if (dwProcID == gc->config.process_id) {
-			break;
-		}
-	} while (window != NULL);
+	HWND window = (HWND)gc->config.hwnd;
 
 	setup_window(gc, window);
 	return;
@@ -2240,7 +2234,7 @@ static obs_properties_t *game_capture_properties(void *data)
 	obs_property_list_add_string(p, TEXT_MODE_WINDOW, SETTING_MODE_WINDOW);
 	obs_property_list_add_string(p, TEXT_MODE_HOTKEY, SETTING_MODE_HOTKEY);
 
-	obs_property_list_add_string(p, SETTINGS_PROCESS_ID, "Process id");
+	obs_property_list_add_int(p, SETTINGS_HWND, 0);
 
 	obs_property_set_modified_callback(p, mode_callback);
 
